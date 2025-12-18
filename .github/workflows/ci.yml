@@ -1,0 +1,26 @@
+name: CI
+
+"on":
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  docker-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test stage (runs pytest)
+        run: docker build --target test -t projekt:test .
+
+      - name: Build final image
+        run: docker build --target final -t projekt:latest .
+
