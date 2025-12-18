@@ -9,30 +9,46 @@ jobs:
   cd-status:
     runs-on: ubuntu-latest
     steps:
-      - name: CD status
-        run: echo "CD is configured. Build+push runs only when Azure/ACR secrets are set."
+      - name: Status
+        run: echo "CD is configured. To enable: set repo variable ENABLE_CD=true and add Azure/ACR secrets."
 
   build-and-push:
     runs-on: ubuntu-latest
 
-    # Job uruchomi się TYLKO gdy:
-    # - wszystkie sekrety są ustawione
-    # - i subscription id NIE jest tenantId (bo wtedy azure/login polegnie)
-    if: >
-      ${{
-        secrets.AZURE_CLIENT_ID != '' &&
-        secrets.AZURE_TENANT_ID != '' &&
-        secrets.AZURE_SUBSCRIPTION_ID != '' &&
-        secrets.ACR_NAME != '' &&
-        secrets.ACR_LOGIN_SERVER != '' &&
-        secrets.AZURE_SUBSCRIPTION_ID != '785acb66-71d5-49f6-b377-37a292991048'
-      }}
+    # ✅ TO DZIAŁA: vars można używać w job-level if
+    if: ${{ vars.ENABLE_CD == 'true' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check secrets
+        id: check
+        shell: bash
+        run: |
+          # Jeśli brakuje sekretów -> ustaw RUN_CD=false i nie rób nic dalej
+          if [ -z "${{ secrets.AZURE_CLIENT_ID }}" ] || \
+             [ -z "${{ secrets.AZURE_TENANT_ID }}" ] || \
+             [ -z "${{ secrets.AZURE_SUBSCRIPTION_ID }}" ] || \
+             [ -z "${{ secrets.ACR_NAME }}" ] || \
+             [ -z "${{ secrets.ACR_LOGIN_SERVER }}" ]; then
+            echo "RUN_CD=false" >> $GITHUB_ENV
+            echo "Missing secrets -> skipping deploy steps."
+            exit 0
+          fi
+
+          # Blokada na Twój tenant-level (to nie jest subskrypcja)
+          if [ "${{ secrets.AZURE_SUBSCRIPTION_ID }}" = "785acb66-71d5-49f6-b377-37a292991048" ]; then
+            echo "RUN_CD=false" >> $GITHUB_ENV
+            echo "SubscriptionId equals tenantId -> skipping deploy steps."
+            exit 0
+          fi
+
+          echo "RUN_CD=true" >> $GITHUB_ENV
+          echo "All secrets look present -> deploy steps enabled."
+
       - name: Login to Azure
+        if: ${{ env.RUN_CD == 'true' }}
         uses: azure/login@v1
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -40,10 +56,13 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Login to ACR
+        if: ${{ env.RUN_CD == 'true' }}
         run: az acr login --name ${{ secrets.ACR_NAME }}
 
       - name: Build Docker image
+        if: ${{ env.RUN_CD == 'true' }}
         run: docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/projekt-devops:latest .
 
       - name: Push Docker image
+        if: ${{ env.RUN_CD == 'true' }}
         run: docker push ${{ secrets.ACR_LOGIN_SERVER }}/projekt-devops:latest
