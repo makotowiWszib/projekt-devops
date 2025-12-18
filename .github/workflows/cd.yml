@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Status
-        run: echo "CD is configured. To enable: set repo variable ENABLE_CD=true and add Azure/ACR secrets."
+        run: 'echo "CD is configured. To enable: set repo variable ENABLE_CD=true and add Azure/ACR secrets."'
+
 
   build-and-push:
     runs-on: ubuntu-latest
