@@ -8,7 +8,8 @@ def create_app() -> Flask:
     app.config.from_object(Settings)
 
     db.init_app(app)
-    migrate.init_app(app, db)
+    migrate.init_app(app, db, directory="app/migrations")
+
 
     @app.get("/health")
     def health():
