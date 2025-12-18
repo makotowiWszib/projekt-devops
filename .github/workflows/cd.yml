@@ -6,12 +6,15 @@ name: CD (ACR Push)
       - main
 
 jobs:
+  cd-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: CD status
+        run: echo "CD will run only when Azure/ACR secrets are configured."
+
   build-and-push:
     runs-on: ubuntu-latest
-
-    #Ten job NIE URUCHOMI się bez sekretów (czyli nie będzie failował bez subskrypcji)
-    if: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' && secrets.ACR_NAME != '' && secrets.ACR_LOGIN_SERVER != '' }}
-
+    if: ${{ contains(secrets, 'AZURE_CLIENT_ID') && contains(secrets, 'AZURE_TENANT_ID') && contains(secrets, 'AZURE_SUBSCRIPTION_ID') && contains(secrets, 'ACR_NAME') && contains(secrets, 'ACR_LOGIN_SERVER') }}
 
     steps:
       - name: Checkout
