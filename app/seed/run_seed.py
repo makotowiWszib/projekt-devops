@@ -3,15 +3,29 @@ import psycopg2
 
 OUT_DIR = os.getenv("SEED_OUTPUT_DIR", "/seed_output")
 
-def wait_for_db(dsn: str, attempts=30, delay=2):
+def wait_for_db_and_table(dsn: str, attempts=60, delay=2):
     for _ in range(attempts):
         try:
             conn = psycopg2.connect(dsn)
+            conn.autocommit = True
+            cur = conn.cursor()
+
+            # sprawdź czy tabela users istnieje
+            cur.execute("SELECT to_regclass('public.users');")
+            exists = cur.fetchone()[0] is not None
+
+            cur.close()
             conn.close()
-            return
+
+            if exists:
+                return
+
         except Exception:
-            time.sleep(delay)
-    raise RuntimeError("DB not reachable")
+            pass
+
+        time.sleep(delay)
+
+    raise RuntimeError("DB reachable, but users table not found")
 
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -23,7 +37,7 @@ def main():
     dbname = os.getenv("POSTGRES_DB", "appdb")
     dsn = f"host={host} port={port} dbname={dbname} user={user} password={password}"
 
-    wait_for_db(dsn)
+    wait_for_db_and_table(dsn)
 
     emails = [f"user{i}@example.com" for i in range(1, 6)]
 
