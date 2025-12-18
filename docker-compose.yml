@@ -23,7 +23,9 @@ services:
       FLASK_APP: app.src.main:create_app
     depends_on:
       - db
-    command: ["sh", "-c", "flask db upgrade -d app/migrations"]
+    volumes:
+      - ./app/migrations:/app/app/migrations
+    command: ["sh", "-c", "export FLASK_APP=app.src.main:create_app && flask db upgrade -d app/migrations"]
     networks:
       - back_net
     restart: "no"
