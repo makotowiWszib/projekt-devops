@@ -1,0 +1,86 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: appdb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - back_net
+
+  migration_runner:
+    build:
+      context: .
+      target: final
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: appdb
+      FLASK_APP: app.src.main:create_app
+    depends_on:
+      - db
+    command: ["sh", "-c", "flask db upgrade"]
+    networks:
+      - back_net
+    restart: "no"
+
+  seed_runner:
+    build:
+      context: .
+      target: final
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: appdb
+      SEED_OUTPUT_DIR: /seed_output
+    depends_on:
+      - migration_runner
+    command: ["python", "-m", "app.seed.run_seed"]
+    volumes:
+      - seed_output:/seed_output
+    networks:
+      - back_net
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: final
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: appdb
+    depends_on:
+      - seed_runner
+    networks:
+      - front_net
+      - back_net
+
+  nginx:
+    image: nginx:1.27
+    depends_on:
+      - app
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - front_net
+
+networks:
+  front_net:
+  back_net:
+
+volumes:
+  db_data:
+  nginx_logs:
+  seed_output:
