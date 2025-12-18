@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     #Ten job NIE URUCHOMI się bez sekretów (czyli nie będzie failował bez subskrypcji)
-    if: ${{ secrets.AZURE_CLIENT_ID != '' }}
+    if: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' && secrets.ACR_NAME != '' && secrets.ACR_LOGIN_SERVER != '' }}
+
 
     steps:
       - name: Checkout
