@@ -10,11 +10,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: CD status
-        run: echo "CD will run only when Azure/ACR secrets are configured."
+        run: echo "CD is configured. Build+push runs only when Azure/ACR secrets are set."
 
   build-and-push:
     runs-on: ubuntu-latest
-    if: ${{ contains(secrets, 'AZURE_CLIENT_ID') && contains(secrets, 'AZURE_TENANT_ID') && contains(secrets, 'AZURE_SUBSCRIPTION_ID') && contains(secrets, 'ACR_NAME') && contains(secrets, 'ACR_LOGIN_SERVER')&& (secrets.AZURE_SUBSCRIPTION_ID != '785acb66-71d5-49f6-b377-37a292991048') }}
+
+    # Job uruchomi się TYLKO gdy:
+    # - wszystkie sekrety są ustawione
+    # - i subscription id NIE jest tenantId (bo wtedy azure/login polegnie)
+    if: >
+      ${{
+        secrets.AZURE_CLIENT_ID != '' &&
+        secrets.AZURE_TENANT_ID != '' &&
+        secrets.AZURE_SUBSCRIPTION_ID != '' &&
+        secrets.ACR_NAME != '' &&
+        secrets.ACR_LOGIN_SERVER != '' &&
+        secrets.AZURE_SUBSCRIPTION_ID != '785acb66-71d5-49f6-b377-37a292991048'
+      }}
 
     steps:
       - name: Checkout
